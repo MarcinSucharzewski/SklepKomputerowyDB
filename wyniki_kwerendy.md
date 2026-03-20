@@ -18,7 +18,7 @@ SELECT k.nazwa AS kategoria,
      JOIN sklep.kategorie k ON ((k.kategoria_id = p.kategoria_id)))
      JOIN sklep.transakcje t ON ((t.transakcja_id = pt.transakcja_id)))
   WHERE ((t.status)::text = 'zrealizowana'::text)
-  GROUP BY k.nazwa
+  GROUP BY k.nazwa.;..;.;;.  plkp[kpo[ iopo uiohi ugug gjhbmbkm ]]
   ORDER BY (sum(((pt.ilosc)::numeric * pt.cena_jednostkowa))) DESC;
 ```
 
