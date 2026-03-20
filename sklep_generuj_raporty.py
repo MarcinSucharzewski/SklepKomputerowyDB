@@ -60,8 +60,22 @@ VIEWS = [
 # ---------------------------------------------------------------------------
 def md_table(columns: list[str], rows: list[tuple]) -> str:
     """Zwraca tabelkę Markdown z podanych kolumn i wierszy."""
+    def fmt_value(v):
+        if v is None:
+            return "NULL"
+        if isinstance(v, float):
+            s = f"{v:.2f}" if v != int(v) else f"{int(v)}"
+            return s.rstrip('0').rstrip('.')
+        if isinstance(v, str):
+            return v
+        # dla Decimal/Numeryczne
+        s = str(v)
+        if '.' in s:
+            s = s.rstrip('0').rstrip('.')
+        return s
+
     str_rows = [
-        [str(v) if v is not None else "NULL" for v in row]
+        [fmt_value(v) for v in row]
         for row in rows
     ]
     widths = [len(c) for c in columns]

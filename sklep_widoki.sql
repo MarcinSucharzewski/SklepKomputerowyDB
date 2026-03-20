@@ -83,26 +83,33 @@ LIMIT 10;
 -- ============================================================
 CREATE OR REPLACE VIEW sklep.v_marza_produkty AS
 SELECT
-    p.nazwa                                               AS produkt,
-    k.nazwa                                               AS kategoria,
+    p.nazwa AS produkt,
+    k.nazwa AS kategoria,
     p.cena_zakupu,
     p.cena_sprzedazy,
-    (p.cena_sprzedazy - p.cena_zakupu)                    AS marza_szt,
+    (p.cena_sprzedazy - p.cena_zakupu) AS marza_szt,
     ROUND(
-        (p.cena_sprzedazy - p.cena_zakupu)
-        / p.cena_zakupu * 100, 2
-    )                                                     AS marza_proc,
-    COALESCE(SUM(pt.ilosc), 0)                            AS sprzedane_szt,
-    COALESCE(
-        SUM(pt.ilosc * (pt.cena_jednostkowa - p.cena_zakupu)),
-        0
-    )                                                     AS zysk_laczny
-FROM sklep.produkty            p
-JOIN sklep.kategorie           k   ON k.kategoria_id   = p.kategoria_id
-LEFT JOIN sklep.pozycje_transakcji pt ON pt.produkt_id = p.produkt_id
-LEFT JOIN sklep.transakcje         t  ON t.transakcja_id = pt.transakcja_id
-                                     AND t.status = 'zrealizowana'
-GROUP BY p.produkt_id, p.nazwa, k.nazwa, p.cena_zakupu, p.cena_sprzedazy
+        (p.cena_sprzedazy - p.cena_zakupu) / p.cena_zakupu * 100,
+        2
+    ) AS marza_proc,
+    COALESCE(sprz.sprzedane_szt, 0) AS sprzedane_szt,
+    COALESCE(sprz.zysk_laczny, 0) AS zysk_laczny
+FROM sklep.produkty p
+JOIN sklep.kategorie k ON k.kategoria_id = p.kategoria_id
+LEFT JOIN (
+    SELECT
+        pt.produkt_id,
+        SUM(pt.ilosc) AS sprzedane_szt,
+        SUM(pt.ilosc * (pt.cena_jednostkowa - p.cena_zakupu)) AS zysk_laczny
+    FROM sklep.pozycje_transakcji pt
+    JOIN sklep.transakcje t
+        ON t.transakcja_id = pt.transakcja_id
+    JOIN sklep.produkty p
+        ON p.produkt_id = pt.produkt_id
+    WHERE t.status = 'zrealizowana'
+    GROUP BY pt.produkt_id
+) sprz
+    ON sprz.produkt_id = p.produkt_id
 ORDER BY zysk_laczny DESC;
 
 
@@ -225,21 +232,34 @@ ORDER BY wartosc_dostaw DESC;
 -- ============================================================
 CREATE OR REPLACE VIEW sklep.v_sprzedaz_vs_zakupy AS
 SELECT
-    k.nazwa                                             AS kategoria,
-    COALESCE(SUM(pd.ilosc), 0)                          AS zakupiono_szt,
-    COALESCE(SUM(pt_agg.sprzedano_szt), 0)              AS sprzedano_szt
+    k.nazwa AS kategoria,
+    COALESCE(SUM(pd_agg.zakupiono_szt), 0) AS zakupiono_szt,
+    COALESCE(SUM(pt_agg.sprzedano_szt), 0) AS sprzedano_szt
 FROM sklep.kategorie k
-LEFT JOIN sklep.produkty p ON p.kategoria_id = k.kategoria_id
-LEFT JOIN sklep.pozycje_dostawy pd ON pd.produkt_id = p.produkt_id
+LEFT JOIN sklep.produkty p
+    ON p.kategoria_id = k.kategoria_id
 LEFT JOIN (
-    SELECT pt.produkt_id, SUM(pt.ilosc) AS sprzedano_szt
-    FROM sklep.pozycje_transakcji  pt
-    JOIN sklep.transakcje          t ON t.transakcja_id = pt.transakcja_id
+    SELECT
+        produkt_id,
+        SUM(ilosc) AS zakupiono_szt
+    FROM sklep.pozycje_dostawy
+    GROUP BY produkt_id
+) pd_agg
+    ON pd_agg.produkt_id = p.produkt_id
+LEFT JOIN (
+    SELECT
+        pt.produkt_id,
+        SUM(pt.ilosc) AS sprzedano_szt
+    FROM sklep.pozycje_transakcji pt
+    JOIN sklep.transakcje t
+        ON t.transakcja_id = pt.transakcja_id
     WHERE t.status = 'zrealizowana'
     GROUP BY pt.produkt_id
-) pt_agg ON pt_agg.produkt_id = p.produkt_id
+) pt_agg
+    ON pt_agg.produkt_id = p.produkt_id
 GROUP BY k.nazwa
-ORDER BY k.nazwa;
+ORDER BY k.nazwa
+LIMIT 10;
 
 
 -- ============================================================

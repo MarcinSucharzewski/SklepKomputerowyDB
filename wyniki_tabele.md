@@ -38,11 +38,11 @@ SELECT * FROM sklep.produkty LIMIT 5;
 
 | produkt_id | nazwa                         | kategoria_id | producent_id | cena_zakupu | cena_sprzedazy | ilosc_na_stanie | opis                                         |
 | ---------- | ----------------------------- | ------------ | ------------ | ----------- | -------------- | --------------- | -------------------------------------------- |
-| 1          | Intel Core i5-13600K          | 1            | 1            | 900.00      | 1199.00        | 8               | 14 rdzeni (6P+8E), 125 W TDP, socket LGA1700 |
-| 2          | Intel Core i7-13700K          | 1            | 1            | 1400.00     | 1799.00        | 5               | 16 rdzeni (8P+8E), 125 W TDP, socket LGA1700 |
-| 3          | AMD Ryzen 5 7600X             | 1            | 2            | 850.00      | 1099.00        | 10              | 6 rdzeni / 12 wątków, 105 W TDP, socket AM5  |
-| 4          | AMD Ryzen 7 7700X             | 1            | 2            | 1100.00     | 1449.00        | 6               | 8 rdzeni / 16 wątków, 105 W TDP, socket AM5  |
-| 5          | ASUS GeForce RTX 4070 DUAL OC | 2            | 6            | 2200.00     | 2799.00        | 4               | 12 GB GDDR6X, PCIe 4.0, DLSS 3               |
+| 1          | Intel Core i5-13600K          | 1            | 1            | 900         | 1199           | 8               | 14 rdzeni (6P+8E), 125 W TDP, socket LGA1700 |
+| 2          | Intel Core i7-13700K          | 1            | 1            | 1400        | 1799           | 5               | 16 rdzeni (8P+8E), 125 W TDP, socket LGA1700 |
+| 3          | AMD Ryzen 5 7600X             | 1            | 2            | 850         | 1099           | 10              | 6 rdzeni / 12 wątków, 105 W TDP, socket AM5  |
+| 4          | AMD Ryzen 7 7700X             | 1            | 2            | 1100        | 1449           | 6               | 8 rdzeni / 16 wątków, 105 W TDP, socket AM5  |
+| 5          | ASUS GeForce RTX 4070 DUAL OC | 2            | 6            | 2200        | 2799           | 4               | 12 GB GDDR6X, PCIe 4.0, DLSS 3               |
 
 ## `sklep.dostawcy`
 
@@ -80,11 +80,11 @@ SELECT * FROM sklep.pracownicy LIMIT 5;
 
 | pracownik_id | imie     | nazwisko   | stanowisko | data_zatrudnienia | wynagrodzenie | telefon   | email                 |
 | ------------ | -------- | ---------- | ---------- | ----------------- | ------------- | --------- | --------------------- |
-| 1            | Jan      | Kowalski   | kierownik  | 2022-01-15        | 6500.00       | 601100001 | jkowalski@sklep.pl    |
-| 2            | Anna     | Wiśniewska | kierownik  | 2021-06-01        | 6200.00       | 601100002 | awiszniewska@sklep.pl |
-| 3            | Piotr    | Nowak      | sprzedawca | 2023-03-10        | 4200.00       | 601100003 | pnowak@sklep.pl       |
-| 4            | Karolina | Zając      | sprzedawca | 2023-07-22        | 4200.00       | 601100004 | kzajac@sklep.pl       |
-| 5            | Michał   | Wróbel     | sprzedawca | 2024-01-08        | 4000.00       | 601100005 | mwrobel@sklep.pl      |
+| 1            | Jan      | Kowalski   | kierownik  | 2022-01-15        | 6500          | 601100001 | jkowalski@sklep.pl    |
+| 2            | Anna     | Wiśniewska | kierownik  | 2021-06-01        | 6200          | 601100002 | awiszniewska@sklep.pl |
+| 3            | Piotr    | Nowak      | sprzedawca | 2023-03-10        | 4200          | 601100003 | pnowak@sklep.pl       |
+| 4            | Karolina | Zając      | sprzedawca | 2023-07-22        | 4200          | 601100004 | kzajac@sklep.pl       |
+| 5            | Michał   | Wróbel     | sprzedawca | 2024-01-08        | 4000          | 601100005 | mwrobel@sklep.pl      |
 
 ## `sklep.transakcje`
 
@@ -108,11 +108,11 @@ SELECT * FROM sklep.pozycje_transakcji LIMIT 5;
 
 | pozycja_id | transakcja_id | produkt_id | ilosc | cena_jednostkowa |
 | ---------- | ------------- | ---------- | ----- | ---------------- |
-| 1          | 1             | 1          | 1     | 1199.00          |
-| 2          | 1             | 9          | 1     | 369.00           |
-| 3          | 1             | 16         | 1     | 369.00           |
-| 4          | 2             | 6          | 1     | 2199.00          |
-| 5          | 3             | 7          | 2     | 249.00           |
+| 1          | 1             | 1          | 1     | 1199             |
+| 2          | 1             | 9          | 1     | 369              |
+| 3          | 1             | 16         | 1     | 369              |
+| 4          | 2             | 6          | 1     | 2199             |
+| 5          | 3             | 7          | 2     | 249              |
 
 ## `sklep.dostawy`
 
@@ -136,8 +136,8 @@ SELECT * FROM sklep.pozycje_dostawy LIMIT 5;
 
 | pozycja_id | dostawa_id | produkt_id | ilosc | cena_zakupu_jednostkowa |
 | ---------- | ---------- | ---------- | ----- | ----------------------- |
-| 1          | 1          | 1          | 5     | 900.00                  |
-| 2          | 1          | 2          | 3     | 1400.00                 |
-| 3          | 1          | 9          | 10    | 280.00                  |
-| 4          | 2          | 5          | 3     | 2200.00                 |
-| 5          | 2          | 6          | 5     | 1700.00                 |
+| 1          | 1          | 1          | 5     | 900                     |
+| 2          | 1          | 2          | 3     | 1400                    |
+| 3          | 1          | 9          | 10    | 280                     |
+| 4          | 2          | 5          | 3     | 2200                    |
+| 5          | 2          | 6          | 5     | 1700                    |
