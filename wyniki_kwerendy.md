@@ -5,21 +5,18 @@ Każdy wynik ograniczony do **10 rekordów**.
 ## K1 – Sprzedaż wg kategorii
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k1;
-
--- Pełna definicja (widok v_sprzedaz_kategoria):
-SELECT k.nazwa AS kategoria,
-    sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS wartosc_sprzedazy,
-    count(DISTINCT pt.transakcja_id) AS liczba_transakcji,
-    sum(pt.ilosc) AS sprzedane_szt
-   FROM (((sklep.pozycje_transakcji pt
-     JOIN sklep.produkty p ON ((p.produkt_id = pt.produkt_id)))
-     JOIN sklep.kategorie k ON ((k.kategoria_id = p.kategoria_id)))
-     JOIN sklep.transakcje t ON ((t.transakcja_id = pt.transakcja_id)))
-  WHERE ((t.status)::text = 'zrealizowana'::text)
-  GROUP BY k.nazwa
-  ORDER BY (sum(((pt.ilosc)::numeric * pt.cena_jednostkowa))) DESC;
+SELECT
+    k.nazwa                                      AS kategoria,
+    SUM(pt.ilosc * pt.cena_jednostkowa)          AS wartosc_sprzedazy,
+    COUNT(DISTINCT pt.transakcja_id)             AS liczba_transakcji,
+    SUM(pt.ilosc)                                AS sprzedane_szt
+FROM sklep.pozycje_transakcji  pt
+JOIN sklep.produkty            p  ON p.produkt_id    = pt.produkt_id
+JOIN sklep.kategorie           k  ON k.kategoria_id  = p.kategoria_id
+JOIN sklep.transakcje          t  ON t.transakcja_id = pt.transakcja_id
+WHERE t.status = 'zrealizowana'
+GROUP BY k.nazwa
+ORDER BY wartosc_sprzedazy DESC;
 ```
 
 | kategoria       | wartosc_sprzedazy | liczba_transakcji | sprzedane_szt |
@@ -37,20 +34,17 @@ SELECT k.nazwa AS kategoria,
 ## K2 – Sprzedaż wg producenta
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k2;
-
--- Pełna definicja (widok v_sprzedaz_producent):
-SELECT pr.nazwa AS producent,
-    sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS wartosc_sprzedazy,
-    sum(pt.ilosc) AS sprzedane_szt
-   FROM (((sklep.pozycje_transakcji pt
-     JOIN sklep.produkty p ON ((p.produkt_id = pt.produkt_id)))
-     JOIN sklep.producenci pr ON ((pr.producent_id = p.producent_id)))
-     JOIN sklep.transakcje t ON ((t.transakcja_id = pt.transakcja_id)))
-  WHERE ((t.status)::text = 'zrealizowana'::text)
-  GROUP BY pr.nazwa
-  ORDER BY (sum(((pt.ilosc)::numeric * pt.cena_jednostkowa))) DESC;
+SELECT
+    pr.nazwa                                     AS producent,
+    SUM(pt.ilosc * pt.cena_jednostkowa)          AS wartosc_sprzedazy,
+    SUM(pt.ilosc)                                AS sprzedane_szt
+FROM sklep.pozycje_transakcji  pt
+JOIN sklep.produkty            p  ON p.produkt_id   = pt.produkt_id
+JOIN sklep.producenci          pr ON pr.producent_id = p.producent_id
+JOIN sklep.transakcje          t  ON t.transakcja_id = pt.transakcja_id
+WHERE t.status = 'zrealizowana'
+GROUP BY pr.nazwa
+ORDER BY wartosc_sprzedazy DESC;
 ```
 
 | producent | wartosc_sprzedazy | sprzedane_szt |
@@ -69,23 +63,20 @@ SELECT pr.nazwa AS producent,
 ## K3 – Top 10 produktów wg wartości sprzedaży
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k3;
-
--- Pełna definicja (widok v_top_produkty):
-SELECT p.produkt_id,
-    p.nazwa AS produkt,
-    k.nazwa AS kategoria,
-    sum(pt.ilosc) AS sprzedane_szt,
-    sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS wartosc_sprzedazy
-   FROM (((sklep.pozycje_transakcji pt
-     JOIN sklep.produkty p ON ((p.produkt_id = pt.produkt_id)))
-     JOIN sklep.kategorie k ON ((k.kategoria_id = p.kategoria_id)))
-     JOIN sklep.transakcje t ON ((t.transakcja_id = pt.transakcja_id)))
-  WHERE ((t.status)::text = 'zrealizowana'::text)
-  GROUP BY p.produkt_id, p.nazwa, k.nazwa
-  ORDER BY (sum(((pt.ilosc)::numeric * pt.cena_jednostkowa))) DESC
- LIMIT 10;
+SELECT
+    p.produkt_id,
+    p.nazwa                                       AS produkt,
+    k.nazwa                                       AS kategoria,
+    SUM(pt.ilosc)                                 AS sprzedane_szt,
+    SUM(pt.ilosc * pt.cena_jednostkowa)           AS wartosc_sprzedazy
+FROM sklep.pozycje_transakcji  pt
+JOIN sklep.produkty            p  ON p.produkt_id    = pt.produkt_id
+JOIN sklep.kategorie           k  ON k.kategoria_id  = p.kategoria_id
+JOIN sklep.transakcje          t  ON t.transakcja_id = pt.transakcja_id
+WHERE t.status = 'zrealizowana'
+GROUP BY p.produkt_id, p.nazwa, k.nazwa
+ORDER BY wartosc_sprzedazy DESC
+LIMIT 10;
 ```
 
 | produkt_id | produkt                         | kategoria       | sprzedane_szt | wartosc_sprzedazy |
@@ -104,24 +95,28 @@ SELECT p.produkt_id,
 ## K4 – Obrót i marża na produktach
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k4;
-
--- Pełna definicja (widok v_marza_produkty):
-SELECT p.nazwa AS produkt,
-    k.nazwa AS kategoria,
+SELECT
+    p.nazwa                                               AS produkt,
+    k.nazwa                                               AS kategoria,
     p.cena_zakupu,
     p.cena_sprzedazy,
-    (p.cena_sprzedazy - p.cena_zakupu) AS marza_szt,
-    round((((p.cena_sprzedazy - p.cena_zakupu) / p.cena_zakupu) * (100)::numeric), 2) AS marza_proc,
-    COALESCE(sum(pt.ilosc), (0)::bigint) AS sprzedane_szt,
-    COALESCE(sum(((pt.ilosc)::numeric * (pt.cena_jednostkowa - p.cena_zakupu))), (0)::numeric) AS zysk_laczny
-   FROM (((sklep.produkty p
-     JOIN sklep.kategorie k ON ((k.kategoria_id = p.kategoria_id)))
-     LEFT JOIN sklep.pozycje_transakcji pt ON ((pt.produkt_id = p.produkt_id)))
-     LEFT JOIN sklep.transakcje t ON (((t.transakcja_id = pt.transakcja_id) AND ((t.status)::text = 'zrealizowana'::text))))
-  GROUP BY p.produkt_id, p.nazwa, k.nazwa, p.cena_zakupu, p.cena_sprzedazy
-  ORDER BY COALESCE(sum(((pt.ilosc)::numeric * (pt.cena_jednostkowa - p.cena_zakupu))), (0)::numeric) DESC;
+    (p.cena_sprzedazy - p.cena_zakupu)                    AS marza_szt,
+    ROUND(
+        (p.cena_sprzedazy - p.cena_zakupu)
+        / p.cena_zakupu * 100, 2
+    )                                                     AS marza_proc,
+    COALESCE(SUM(pt.ilosc), 0)                            AS sprzedane_szt,
+    COALESCE(
+        SUM(pt.ilosc * (pt.cena_jednostkowa - p.cena_zakupu)),
+        0
+    )                                                     AS zysk_laczny
+FROM sklep.produkty            p
+JOIN sklep.kategorie           k   ON k.kategoria_id  = p.kategoria_id
+LEFT JOIN sklep.pozycje_transakcji pt ON pt.produkt_id = p.produkt_id
+LEFT JOIN sklep.transakcje         t  ON t.transakcja_id = pt.transakcja_id
+                                     AND t.status = 'zrealizowana'
+GROUP BY p.produkt_id, p.nazwa, k.nazwa, p.cena_zakupu, p.cena_sprzedazy
+ORDER BY zysk_laczny DESC;
 ```
 
 | produkt                         | kategoria       | cena_zakupu | cena_sprzedazy | marza_szt | marza_proc | sprzedane_szt | zysk_laczny |
@@ -140,18 +135,18 @@ SELECT p.nazwa AS produkt,
 ## K5 – Całkowity obrót i zysk sklepu
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k5;
-
--- Pełna definicja (widok v_obrot_sklep):
-SELECT sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS przychod_brutto,
-    sum(((pt.ilosc)::numeric * p.cena_zakupu)) AS koszt_zakupu,
-    sum(((pt.ilosc)::numeric * (pt.cena_jednostkowa - p.cena_zakupu))) AS zysk_brutto,
-    round(((sum(((pt.ilosc)::numeric * (pt.cena_jednostkowa - p.cena_zakupu))) / sum(((pt.ilosc)::numeric * pt.cena_jednostkowa))) * (100)::numeric), 2) AS marza_proc
-   FROM ((sklep.pozycje_transakcji pt
-     JOIN sklep.produkty p ON ((p.produkt_id = pt.produkt_id)))
-     JOIN sklep.transakcje t ON ((t.transakcja_id = pt.transakcja_id)))
-  WHERE ((t.status)::text = 'zrealizowana'::text);
+SELECT
+    SUM(pt.ilosc * pt.cena_jednostkowa)                   AS przychod_brutto,
+    SUM(pt.ilosc * p.cena_zakupu)                         AS koszt_zakupu,
+    SUM(pt.ilosc * (pt.cena_jednostkowa - p.cena_zakupu)) AS zysk_brutto,
+    ROUND(
+        SUM(pt.ilosc * (pt.cena_jednostkowa - p.cena_zakupu))
+        / SUM(pt.ilosc * pt.cena_jednostkowa) * 100, 2
+    )                                                     AS marza_proc
+FROM sklep.pozycje_transakcji  pt
+JOIN sklep.produkty            p  ON p.produkt_id    = pt.produkt_id
+JOIN sklep.transakcje          t  ON t.transakcja_id = pt.transakcja_id
+WHERE t.status = 'zrealizowana';
 ```
 
 | przychod_brutto | koszt_zakupu | zysk_brutto | marza_proc |
@@ -161,20 +156,18 @@ SELECT sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS przychod_brutto,
 ## K6 – Statystyki pracowników
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k6;
-
--- Pełna definicja (widok v_statystyki_pracownicy):
-SELECT pr.pracownik_id,
-    (((pr.imie)::text || ' '::text) || (pr.nazwisko)::text) AS pracownik,
+SELECT
+    pr.pracownik_id,
+    pr.imie || ' ' || pr.nazwisko                        AS pracownik,
     pr.stanowisko,
-    count(DISTINCT t.transakcja_id) AS liczba_transakcji,
-    sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS wartosc_sprzedazy
-   FROM ((sklep.pracownicy pr
-     LEFT JOIN sklep.transakcje t ON (((t.pracownik_id = pr.pracownik_id) AND ((t.status)::text = 'zrealizowana'::text))))
-     LEFT JOIN sklep.pozycje_transakcji pt ON ((pt.transakcja_id = t.transakcja_id)))
-  GROUP BY pr.pracownik_id, pr.imie, pr.nazwisko, pr.stanowisko
-  ORDER BY (sum(((pt.ilosc)::numeric * pt.cena_jednostkowa))) DESC NULLS LAST;
+    COUNT(DISTINCT t.transakcja_id)                       AS liczba_transakcji,
+    SUM(pt.ilosc * pt.cena_jednostkowa)                   AS wartosc_sprzedazy
+FROM sklep.pracownicy          pr
+LEFT JOIN sklep.transakcje     t  ON t.pracownik_id  = pr.pracownik_id
+                                 AND t.status = 'zrealizowana'
+LEFT JOIN sklep.pozycje_transakcji pt ON pt.transakcja_id = t.transakcja_id
+GROUP BY pr.pracownik_id, pr.imie, pr.nazwisko, pr.stanowisko
+ORDER BY wartosc_sprzedazy DESC NULLS LAST;
 ```
 
 | pracownik_id | pracownik        | stanowisko | liczba_transakcji | wartosc_sprzedazy |
@@ -189,18 +182,15 @@ SELECT pr.pracownik_id,
 ## K7 – Produkty z niskim stanem magazynowym
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k7;
-
--- Pełna definicja (widok v_niski_stan):
-SELECT p.produkt_id,
-    p.nazwa AS produkt,
-    k.nazwa AS kategoria,
-    p.ilosc_na_stanie AS stan_magazynowy
-   FROM (sklep.produkty p
-     JOIN sklep.kategorie k ON ((k.kategoria_id = p.kategoria_id)))
-  WHERE (p.ilosc_na_stanie <= 5)
-  ORDER BY p.ilosc_na_stanie;
+SELECT
+    p.produkt_id,
+    p.nazwa                  AS produkt,
+    k.nazwa                  AS kategoria,
+    p.ilosc_na_stanie        AS stan_magazynowy
+FROM sklep.produkty  p
+JOIN sklep.kategorie k ON k.kategoria_id = p.kategoria_id
+WHERE p.ilosc_na_stanie <= 5
+ORDER BY p.ilosc_na_stanie ASC;
 ```
 
 | produkt_id | produkt                       | kategoria       | stan_magazynowy |
@@ -212,18 +202,15 @@ SELECT p.produkt_id,
 ## K8 – Wartość magazynu wg kategorii
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k8;
-
--- Pełna definicja (widok v_wartosc_magazyn):
-SELECT k.nazwa AS kategoria,
-    sum(p.ilosc_na_stanie) AS szt_na_stanie,
-    sum(((p.ilosc_na_stanie)::numeric * p.cena_zakupu)) AS wartosc_zakupu,
-    sum(((p.ilosc_na_stanie)::numeric * p.cena_sprzedazy)) AS wartosc_sprzedazy
-   FROM (sklep.produkty p
-     JOIN sklep.kategorie k ON ((k.kategoria_id = p.kategoria_id)))
-  GROUP BY k.nazwa
-  ORDER BY (sum(((p.ilosc_na_stanie)::numeric * p.cena_zakupu))) DESC;
+SELECT
+    k.nazwa                                           AS kategoria,
+    SUM(p.ilosc_na_stanie)                            AS szt_na_stanie,
+    SUM(p.ilosc_na_stanie * p.cena_zakupu)            AS wartosc_zakupu,
+    SUM(p.ilosc_na_stanie * p.cena_sprzedazy)         AS wartosc_sprzedazy
+FROM sklep.produkty  p
+JOIN sklep.kategorie k ON k.kategoria_id = p.kategoria_id
+GROUP BY k.nazwa
+ORDER BY wartosc_zakupu DESC;
 ```
 
 | kategoria       | szt_na_stanie | wartosc_zakupu | wartosc_sprzedazy |
@@ -241,18 +228,15 @@ SELECT k.nazwa AS kategoria,
 ## K9 – Sprzedaż miesięczna
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k9;
-
--- Pełna definicja (widok v_sprzedaz_miesiac):
-SELECT to_char(t.data_transakcji, 'YYYY-MM'::text) AS miesiac,
-    count(DISTINCT t.transakcja_id) AS liczba_transakcji,
-    sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS wartosc_sprzedazy
-   FROM (sklep.transakcje t
-     JOIN sklep.pozycje_transakcji pt ON ((pt.transakcja_id = t.transakcja_id)))
-  WHERE ((t.status)::text = 'zrealizowana'::text)
-  GROUP BY (to_char(t.data_transakcji, 'YYYY-MM'::text))
-  ORDER BY (to_char(t.data_transakcji, 'YYYY-MM'::text));
+SELECT
+    TO_CHAR(t.data_transakcji, 'YYYY-MM')          AS miesiac,
+    COUNT(DISTINCT t.transakcja_id)                 AS liczba_transakcji,
+    SUM(pt.ilosc * pt.cena_jednostkowa)             AS wartosc_sprzedazy
+FROM sklep.transakcje          t
+JOIN sklep.pozycje_transakcji  pt ON pt.transakcja_id = t.transakcja_id
+WHERE t.status = 'zrealizowana'
+GROUP BY miesiac
+ORDER BY miesiac;
 ```
 
 | miesiac | liczba_transakcji | wartosc_sprzedazy |
@@ -264,19 +248,17 @@ SELECT to_char(t.data_transakcji, 'YYYY-MM'::text) AS miesiac,
 ## K10 – Aktywność zarejestrowanych klientów
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k10;
-
--- Pełna definicja (widok v_aktywnosc_klientow):
-SELECT kl.klient_id,
-    (((kl.imie)::text || ' '::text) || (kl.nazwisko)::text) AS klient,
-    count(DISTINCT t.transakcja_id) AS liczba_wizyt,
-    sum(((pt.ilosc)::numeric * pt.cena_jednostkowa)) AS wydano_lacznie
-   FROM ((sklep.klienci kl
-     JOIN sklep.transakcje t ON (((t.klient_id = kl.klient_id) AND ((t.status)::text = 'zrealizowana'::text))))
-     JOIN sklep.pozycje_transakcji pt ON ((pt.transakcja_id = t.transakcja_id)))
-  GROUP BY kl.klient_id, kl.imie, kl.nazwisko
-  ORDER BY (sum(((pt.ilosc)::numeric * pt.cena_jednostkowa))) DESC;
+SELECT
+    kl.klient_id,
+    kl.imie || ' ' || kl.nazwisko                  AS klient,
+    COUNT(DISTINCT t.transakcja_id)                 AS liczba_wizyt,
+    SUM(pt.ilosc * pt.cena_jednostkowa)             AS wydano_lacznie
+FROM sklep.klienci             kl
+JOIN sklep.transakcje          t  ON t.klient_id    = kl.klient_id
+                                 AND t.status = 'zrealizowana'
+JOIN sklep.pozycje_transakcji  pt ON pt.transakcja_id = t.transakcja_id
+GROUP BY kl.klient_id, kl.imie, kl.nazwisko
+ORDER BY wydano_lacznie DESC;
 ```
 
 | klient_id | klient              | liczba_wizyt | wydano_lacznie |
@@ -295,19 +277,16 @@ SELECT kl.klient_id,
 ## K11 – Zestawienie dostaw wg dostawcy
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k11;
-
--- Pełna definicja (widok v_zestawienie_dostaw):
-SELECT d.nazwa AS dostawca,
-    count(DISTINCT dost.dostawa_id) AS liczba_dostaw,
-    sum(((pd.ilosc)::numeric * pd.cena_zakupu_jednostkowa)) AS wartosc_dostaw
-   FROM ((sklep.dostawcy d
-     JOIN sklep.dostawy dost ON ((dost.dostawca_id = d.dostawca_id)))
-     JOIN sklep.pozycje_dostawy pd ON ((pd.dostawa_id = dost.dostawa_id)))
-  WHERE ((dost.status)::text = 'przyjęta'::text)
-  GROUP BY d.nazwa
-  ORDER BY (sum(((pd.ilosc)::numeric * pd.cena_zakupu_jednostkowa))) DESC;
+SELECT
+    d.nazwa                                            AS dostawca,
+    COUNT(DISTINCT dost.dostawa_id)                    AS liczba_dostaw,
+    SUM(pd.ilosc * pd.cena_zakupu_jednostkowa)         AS wartosc_dostaw
+FROM sklep.dostawcy            d
+JOIN sklep.dostawy             dost ON dost.dostawca_id = d.dostawca_id
+JOIN sklep.pozycje_dostawy     pd   ON pd.dostawa_id    = dost.dostawa_id
+WHERE dost.status = 'przyjęta'
+GROUP BY d.nazwa
+ORDER BY wartosc_dostaw DESC;
 ```
 
 | dostawca               | liczba_dostaw | wartosc_dostaw |
@@ -319,24 +298,22 @@ SELECT d.nazwa AS dostawca,
 ## K12 – Sprzedaż vs zakupy wg kategorii
 
 ```sql
--- Szybkie wywołanie:
-SELECT * FROM sklep.k12;
-
--- Pełna definicja (widok v_sprzedaz_vs_zakupy):
-SELECT k.nazwa AS kategoria,
-    COALESCE(sum(pd.ilosc), (0)::bigint) AS zakupiono_szt,
-    COALESCE(sum(pt_agg.sprzedano_szt), (0)::numeric) AS sprzedano_szt
-   FROM (((sklep.kategorie k
-     LEFT JOIN sklep.produkty p ON ((p.kategoria_id = k.kategoria_id)))
-     LEFT JOIN sklep.pozycje_dostawy pd ON ((pd.produkt_id = p.produkt_id)))
-     LEFT JOIN ( SELECT pt.produkt_id,
-            sum(pt.ilosc) AS sprzedano_szt
-           FROM (sklep.pozycje_transakcji pt
-             JOIN sklep.transakcje t ON ((t.transakcja_id = pt.transakcja_id)))
-          WHERE ((t.status)::text = 'zrealizowana'::text)
-          GROUP BY pt.produkt_id) pt_agg ON ((pt_agg.produkt_id = p.produkt_id)))
-  GROUP BY k.nazwa
-  ORDER BY k.nazwa;
+SELECT
+    k.nazwa                                             AS kategoria,
+    COALESCE(SUM(pd.ilosc), 0)                          AS zakupiono_szt,
+    COALESCE(SUM(pt_agg.sprzedano_szt), 0)              AS sprzedano_szt
+FROM sklep.kategorie k
+LEFT JOIN sklep.produkty p ON p.kategoria_id = k.kategoria_id
+LEFT JOIN sklep.pozycje_dostawy pd ON pd.produkt_id = p.produkt_id
+LEFT JOIN (
+    SELECT pt.produkt_id, SUM(pt.ilosc) AS sprzedano_szt
+    FROM sklep.pozycje_transakcji  pt
+    JOIN sklep.transakcje          t ON t.transakcja_id = pt.transakcja_id
+    WHERE t.status = 'zrealizowana'
+    GROUP BY pt.produkt_id
+) pt_agg ON pt_agg.produkt_id = p.produkt_id
+GROUP BY k.nazwa
+ORDER BY k.nazwa;
 ```
 
 | kategoria       | zakupiono_szt | sprzedano_szt |
